@@ -7,19 +7,26 @@
   >
     <div class="grid">
       <div v-for="(line, index) in matrix" :key="index"  class="line">
-        <div v-for="(value, key) in line" :key="key" class="cell">
-          <img v-if="value" src="../assets/check.png"/>
-          <div v-else class="cross-wrapper">
-            <img src="../assets/cross.png"/>
+        <div v-for="(value, key) in line" :key="key" :data-line="index" :data-index="key" class="cell">
+          <div class="cell-wrapper" :class="{ 'active': value }">
+            <img v-if="value" src="../assets/check.png"/>
+            <div v-else class="cross-wrapper">
+              <img src="../assets/cross.png"/>
+            </div>
           </div>
         </div>
       </div>
     </div>
     <div class="helper" ref="helper"/>
+    <div class="helper" ref="highlighter"/>
+    <Modal v-if="isModalOpen" :data="modalArray" :matrix="matrix" @edit="edit" @close="isModalOpen = false"/>
   </div>
 </template>
 
 <script>
+import Modal from './Modal.vue'
+
+
 const matrix = [
   [1, 0, 1, 0, 1],
   [1, 0, 0, 0, 1],
@@ -27,18 +34,24 @@ const matrix = [
   [0, 0, 1, 0, 1],
   [0, 0, 0, 0, 1]
 ]
-
 const startCoords = { x: 0, y: 0 }
+
 
 export default {
   name: 'Grid',
   data() {
     return {
       matrix,
+      choosedCells: [],
+      modalArray: [],
+      isModalOpen: false,
     }
   },
 
   methods: {
+    edit: function (newMatrix) {
+      this.matrix = newMatrix
+    },
     mouseDown: function(e) {
       startCoords.x = e.pageX
       startCoords.y = e.pageY
@@ -50,15 +63,13 @@ export default {
       this.$refs.helper.style.height = '0px'
     },
     mouseUp: function() {
-      this.$refs.helper.style.display = 'none';
-      console.log(Array.from(document.getElementsByClassName('cell')).map(cell => {
-        return {
-          offsetTop: cell.offsetTop,
-          offsetLeft: cell.offsetLeft,
-          offsetWidth: cell.offsetWidth,
-          offsetHeight: cell.offsetHeight
-        }
-      }))
+      this.$refs.helper.style.display = 'none'
+      this.$refs.highlighter.style.display = 'none'
+      this.modalArray = [...this.choosedCells]
+      if (this.modalArray.length) {
+        this.isModalOpen = true
+      }
+      this.choosedCells = []
     },
     mouseMove: function(e) {
       const diffX = e.pageX - startCoords.x
@@ -82,7 +93,40 @@ export default {
 
       this.$refs.helper.style.width = Math.abs(diffX) + 'px'
       this.$refs.helper.style.height = Math.abs(diffY) + 'px'
+
+      const helperCoords = this.$refs.helper.getBoundingClientRect()
+      helperCoords.x += pageXOffset
+      helperCoords.y += pageYOffset
+
+      const cells = Array.from(document.getElementsByClassName('cell')).map(cell => {
+        cell.position = {
+          line: cell.getAttribute('data-line'),
+          index: cell.getAttribute('data-index')
+        } 
+        return cell
+      })
+      this.choosedCells = cells.filter(cell => {
+        const centerCoords = {
+          x: cell.offsetLeft + cell.offsetWidth / 2,
+          y: cell.offsetTop + cell.offsetHeight / 2,
+        }
+        return (helperCoords.x <= centerCoords.x) && (helperCoords.y <= centerCoords.y) && (helperCoords.x + helperCoords.width >= centerCoords.x) && (helperCoords.y + helperCoords.height >= centerCoords.y)
+      })
+      if (this.choosedCells.length) {
+        const firstCell = this.choosedCells[0]
+        const lastCell = this.choosedCells[this.choosedCells.length - 1]
+        this.$refs.highlighter.style.display = 'block'
+        this.$refs.highlighter.style.top = firstCell.offsetTop + 'px'
+        this.$refs.highlighter.style.left = firstCell.offsetLeft  + 'px'
+        this.$refs.highlighter.style.height = lastCell.offsetTop + lastCell.offsetHeight - firstCell.offsetTop + 'px'
+        this.$refs.highlighter.style.width = lastCell.offsetLeft + lastCell.offsetWidth - firstCell.offsetLeft + 'px'
+      } else {
+        this.$refs.highlighter.style.display = 'none'
+      }
     }
+  },
+  components: { 
+    Modal
   }
 }
 </script>
@@ -90,7 +134,6 @@ export default {
 <style lang="scss" scoped>
 .wrapper {
   padding-top: 100px;
-  min-height: 100vh;
   display: flex;
   justify-content: center;
   .grid {
@@ -101,19 +144,24 @@ export default {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       .cell {
-        width: 60px;
-        height: 60px;
-        margin: 10px;
-        border-radius: 30px;
+        width: 80px;
+        height: 80px;
         padding: 10px;
-        background: #92F795;
-        img {
-          max-width: 100%;
-          max-height: 100%;
-          width: auto;
-        }
-        .cross-wrapper {
-          padding: 15px;
+        .cell-wrapper {
+          padding: 10px;
+          border-radius: 30px;
+          background: #FFAEAE;
+          img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+          }
+          .cross-wrapper {
+            padding: 15px;
+          }
+          &.active {
+            background: #92F795;
+          }
         }
       }
     }
