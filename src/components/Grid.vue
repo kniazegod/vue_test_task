@@ -68,7 +68,6 @@ export default {
 			isModalOpen: false
 		}
 	},
-
 	methods: {
 		edit: function(newMatrix) {
 			this.matrix = newMatrix
