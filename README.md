@@ -4,6 +4,11 @@
 ```
 npm install
 ```
+or 
+```
+yarn # recommended for MacOS
+```
+В случае использования yarn во всех дальнейших командах так же необходимо использовать yarn вместо npm run
 
 ### Compiles and hot-reloads for development
 ```
